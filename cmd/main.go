@@ -69,12 +69,14 @@ func main() {
 	// Define command-line flags
 	dirPtr := flag.String("dir", ".", "the root directory to scan for Python files")
 	tagsPtr := flag.String("tags", "TODO,BUG,FIXME", "comma-separated list of tags to search for")
+	modePtr := flag.String("mode", "commit", "mode of operation: commit or root")
 
 	// Parse the command-line flags
 	flag.Parse()
 
 	root := *dirPtr
 	tags := strings.Split(*tagsPtr, ",")
+	mode := *modePtr
 
 	// Compile regex patterns for the tags and store them in a map
 	tagPatterns := make(map[string]*regexp.Regexp, len(tags))
@@ -88,10 +90,29 @@ func main() {
 		tagPatterns[tag] = re
 	}
 
-	// Gather all Python files in the root directory
-	pythonFiles, err := gatherPythonFiles(root)
-	if err != nil {
-		fmt.Printf("Error gathering Python files: %v\n", err)
+	var pythonFiles []string
+	var err error
+
+	// Gather the Python files to scan from the command-line arguments
+	if mode == "commit" {
+		pythonFiles = flag.Args()
+		// Filter out non-Python files
+		var filteredFiles []string
+		for _, file := range pythonFiles {
+			if filepath.Ext(file) == ".py" {
+				filteredFiles = append(filteredFiles, file)
+			}
+		}
+		pythonFiles = filteredFiles
+	} else if mode == "root" {
+		// Gather all Python files in the root directory
+		pythonFiles, err = gatherPythonFiles(root)
+		if err != nil {
+			fmt.Printf("Error gathering Python files: %v\n", err)
+			os.Exit(1)
+		}
+	} else {
+		fmt.Printf("Error: invalid mode %s. Use 'auto' or 'commit'\n", mode)
 		os.Exit(1)
 	}
 
