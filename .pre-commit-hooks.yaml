@@ -1,7 +1,6 @@
 - id: comche
   name: comche
   description: "Check Python files for TODO, BUG, and FIXME comments"
-  entry: ./scripts/main
-  language: script
+  entry: ./cmd/main.go
+  language: golang
   types: [python]
-  additional_dependencies: []
