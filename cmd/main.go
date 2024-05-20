@@ -53,7 +53,7 @@ func parseFileForComments(path string, tagPatterns map[string]*regexp.Regexp) er
 			if pattern.MatchString(line) {
 				line = strings.TrimSpace(line)
 				fmt.Printf("Found %s in %s at line %d: %s\n", tag, path, lineNumber, line)
-				os.Stdout.Sync()
+				os.Exit(1)
 				break
 			}
 		}
