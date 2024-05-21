@@ -2,5 +2,5 @@
   name: comche
   description: "Check Python files for TODO, BUG, and FIXME comments"
   entry: ./scripts/main
-  language: scripts
+  language: script
   types: [python]
