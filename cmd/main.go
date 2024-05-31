@@ -11,6 +11,19 @@ import (
 	"sync"
 )
 
+// Create a struct to store the tag, path, line number and line content
+type tagFound struct {
+	tag        string
+	path       string
+	lineNumber int
+	line       string
+}
+
+type fileResults struct {
+	fileName  string
+	tagsFound []tagFound
+}
+
 // gatherPythonFiles returns a list of all python files in the given directory
 func gatherPythonFiles(dir string) ([]string, error) {
 	var pythonFiles []string
@@ -30,10 +43,12 @@ func gatherPythonFiles(dir string) ([]string, error) {
 }
 
 // parseFileForComments scans a file for lines containing special tags like #TODO, #FIXME, etc.
-func parseFileForComments(path string, tagPatterns map[string]*regexp.Regexp) error {
+func parseFileForComments(path string, tagPatterns map[string]*regexp.Regexp) ([]tagFound, error) {
+	results := make([]tagFound, 0)
+
 	file, err := os.Open(path)
 	if err != nil {
-		return fmt.Errorf("error opening file %s: %v", path, err)
+		return results, fmt.Errorf("error opening file %s: %v", path, err)
 	}
 	defer file.Close()
 
@@ -52,18 +67,18 @@ func parseFileForComments(path string, tagPatterns map[string]*regexp.Regexp) er
 			// If the line contains the tag, print the line and the tag
 			if pattern.MatchString(line) {
 				line = strings.TrimSpace(line)
-				fmt.Printf("Found %s in %s at line %d: %s\n", tag, path, lineNumber, line)
-				os.Stdout.Sync()
-				break
+				//fmt.Printf("Found %s in %s at line %d: %s\n", tag, path, lineNumber, line)
+				found := tagFound{tag, path, lineNumber, line}
+				results = append(results, found)
 			}
 		}
 		lineNumber++
 	}
 
 	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("error reading file %s: %v", path, err)
+		return results, fmt.Errorf("error reading file %s: %v", path, err)
 	}
-	return nil
+	return results, nil
 }
 
 func main() {
@@ -119,17 +134,19 @@ func main() {
 
 	// Use a wait group to process files concurrently
 	var wg sync.WaitGroup
+	var results = make([]fileResults, 0)
 	for _, file := range pythonFiles {
 		wg.Add(1)
 		go func(file string) {
 			defer wg.Done()
-			err := parseFileForComments(file, tagPatterns)
+			pyResult, err := parseFileForComments(file, tagPatterns)
 			if err != nil {
 				fmt.Println(err)
 			}
+			results = append(results, fileResults{file, pyResult})
 		}(file)
 	}
-
 	// Wait for all goroutines to complete
 	wg.Wait()
+	fmt.Print(results)
 }
