@@ -11,74 +11,90 @@ import (
 	"sync"
 )
 
-// gatherPythonFiles returns a list of all python files in the given directory
+// tagFound stores the tag, path, line number, and line content
+type tagFound struct {
+	tag        string
+	path       string
+	lineNumber int
+	line       string
+}
+
+type fileResults struct {
+	fileName  string
+	tagsFound []tagFound
+}
+
+// gatherPythonFiles returns a list of all Python files in the given directory
 func gatherPythonFiles(dir string) ([]string, error) {
 	var pythonFiles []string
-
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-
 		if !info.IsDir() && filepath.Ext(path) == ".py" {
 			pythonFiles = append(pythonFiles, path)
 		}
 		return nil
 	})
-
 	return pythonFiles, err
 }
 
 // parseFileForComments scans a file for lines containing special tags like #TODO, #FIXME, etc.
-func parseFileForComments(path string, tagPatterns map[string]*regexp.Regexp) error {
+func parseFileForComments(path string, tagPatterns map[string]*regexp.Regexp) ([]tagFound, error) {
+	results := []tagFound{}
 	file, err := os.Open(path)
 	if err != nil {
-		return fmt.Errorf("error opening file %s: %v", path, err)
+		return nil, fmt.Errorf("error opening file %s: %v", path, err)
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
 	lineNumber := 1
-
 	for scanner.Scan() {
 		line := scanner.Text()
-		// Check if the line contains any of the tags
+		line = strings.TrimSpace(line)
+		if len(line) == 0 {
+			lineNumber++
+			continue
+		}
 		for tag, pattern := range tagPatterns {
-			// When line is empty, skip the line
-			if len(line) == 0 {
-				continue
-			}
-
-			// If the line contains the tag, print the line and the tag
 			if pattern.MatchString(line) {
-				line = strings.TrimSpace(line)
-				fmt.Printf("Found %s in %s at line %d: %s\n", tag, path, lineNumber, line)
+				results = append(results, tagFound{tag, path, lineNumber, line})
 				break
 			}
 		}
 		lineNumber++
 	}
-
 	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("error reading file %s: %v", path, err)
+		return nil, fmt.Errorf("error reading file %s: %v", path, err)
 	}
-	return nil
+	return results, nil
+}
+
+func inspectResult(results []fileResults, fail int) {
+	counter := 0
+	for _, result := range results {
+		for _, tag := range result.tagsFound {
+			fmt.Printf("Found %s in %s at line %d: %s\n", tag.tag, tag.path, tag.lineNumber, tag.line)
+			counter++
+		}
+	}
+	if counter > fail {
+		os.Exit(1)
+	}
 }
 
 func main() {
-	// Define command-line flags
 	dirPtr := flag.String("dir", ".", "the root directory to scan for Python files")
 	tagsPtr := flag.String("tags", "TODO,BUG,FIXME", "comma-separated list of tags to search for")
 	modePtr := flag.String("mode", "commit", "mode of operation: commit or root")
-
-	// Parse the command-line flags
+	failPtr := flag.Int("fail", 0, "fail over n tags found")
 	flag.Parse()
 
 	root := *dirPtr
 	tags := strings.Split(*tagsPtr, ",")
 	mode := *modePtr
 
-	// Compile regex patterns for the tags and store them in a map
 	tagPatterns := make(map[string]*regexp.Regexp, len(tags))
 	for _, tag := range tags {
 		pattern := fmt.Sprintf(`# ?%s`, regexp.QuoteMeta(tag))
@@ -93,10 +109,8 @@ func main() {
 	var pythonFiles []string
 	var err error
 
-	// Gather the Python files to scan from the command-line arguments
 	if mode == "commit" {
 		pythonFiles = flag.Args()
-		// Filter out non-Python files
 		var filteredFiles []string
 		for _, file := range pythonFiles {
 			if filepath.Ext(file) == ".py" {
@@ -105,30 +119,36 @@ func main() {
 		}
 		pythonFiles = filteredFiles
 	} else if mode == "root" {
-		// Gather all Python files in the root directory
 		pythonFiles, err = gatherPythonFiles(root)
 		if err != nil {
 			fmt.Printf("Error gathering Python files: %v\n", err)
 			os.Exit(1)
 		}
 	} else {
-		fmt.Printf("Error: invalid mode %s. Use 'auto' or 'commit'\n", mode)
+		fmt.Printf("Error: invalid mode %s. Use 'root' or 'commit'\n", mode)
 		os.Exit(1)
 	}
 
-	// Use a wait group to process files concurrently
 	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var results []fileResults
+
 	for _, file := range pythonFiles {
 		wg.Add(1)
 		go func(file string) {
 			defer wg.Done()
-			err := parseFileForComments(file, tagPatterns)
+			pyResult, err := parseFileForComments(file, tagPatterns)
 			if err != nil {
 				fmt.Println(err)
+				return
 			}
+			mu.Lock()
+			results = append(results, fileResults{file, pyResult})
+			mu.Unlock()
 		}(file)
 	}
 
-	// Wait for all goroutines to complete
 	wg.Wait()
+
+	inspectResult(results, *failPtr)
 }
