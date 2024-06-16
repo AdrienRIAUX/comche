@@ -81,11 +81,27 @@ func parseFileForComments(path string, tagPatterns map[string]*regexp.Regexp) ([
 	return results, nil
 }
 
+func inspectResult(results []fileResults, fail int) {
+	counter := 0
+
+	for _, result := range results {
+		for _, tag := range result.tagsFound {
+			fmt.Printf("Found %s in %s at line %d: %s\n", tag.tag, tag.path, tag.lineNumber, tag.line)
+			counter++
+		}
+	}
+
+	if counter > fail {
+		os.Exit(1)
+	}
+}
+
 func main() {
 	// Define command-line flags
 	dirPtr := flag.String("dir", ".", "the root directory to scan for Python files")
 	tagsPtr := flag.String("tags", "TODO,BUG,FIXME", "comma-separated list of tags to search for")
 	modePtr := flag.String("mode", "commit", "mode of operation: commit or root")
+	failPtr := flag.Int("fail", 0, "fail over n tags found")
 
 	// Parse the command-line flags
 	flag.Parse()
@@ -148,5 +164,6 @@ func main() {
 	}
 	// Wait for all goroutines to complete
 	wg.Wait()
-	fmt.Print(results)
+
+	inspectResult(results, *failPtr)
 }
