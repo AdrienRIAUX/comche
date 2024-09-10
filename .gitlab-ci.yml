@@ -1,12 +1,7 @@
-image: golang:1.20
+image: golang:1.22
 
 stages:
   - build
-
-before_script:
-  - export GOPATH="/go"
-  - export PATH=$GOPATH/bin:$PATH
-  - go env
 
 build:
   stage: build
@@ -14,3 +9,4 @@ build:
     - go build -o bin/main main.go
   only:
     - main
+    - dev
