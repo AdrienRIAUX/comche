@@ -86,13 +86,13 @@ func inspectResult(results []fileResults, fail int) {
 
 func main() {
 	dirPtr := flag.String("dir", ".", "the root directory to scan for Python files")
-	tagsPtr := flag.String("tags", "TODO,BUG,FIXME", "comma-separated list of tags to search for")
+	tagsPtr := flag.String("tags", "TODO-BUG-FIXME", "dash-separated list of tags to search for")
 	modePtr := flag.String("mode", "commit", "mode of operation: commit or root")
 	failPtr := flag.Int("fail", 0, "fail over n tags found")
 	flag.Parse()
 
 	root := *dirPtr
-	tags := strings.Split(*tagsPtr, ",")
+	tags := strings.Split(*tagsPtr, "-")
 	mode := *modePtr
 
 	tagPatterns := make(map[string]*regexp.Regexp, len(tags))
