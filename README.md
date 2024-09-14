@@ -15,7 +15,7 @@ Comments Checker is a pre-commit hook written in Go, designed for fast parsing a
 The following flags can be used with the CLI to customize its behavior:
 
 - `-dir`: Specifies the root directory to scan for Python files (default is current directory).
-- `-tags`: Comma-separated list of tags to search for (default is "TODO-BUG-FIXME").
+- `-tags`: Dash-separated list of tags to search for (default is "TODO-BUG-FIXME").
 - `-mode`: Mode of operation, either "commit" or "root" (default is "commit").
 - `-fail`: Fail the commit if the number of tags found exceeds this number (default is 0).
 - `-config` : The path to the TOML configuration file to use. It will overide the over `-tags` and `-fail` flags if specified. 
