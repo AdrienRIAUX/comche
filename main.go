@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/pelletier/go-toml"
 )
 
 // tagFound stores the tag, path, line number, and line content
@@ -19,6 +21,7 @@ type tagFound struct {
 	line       string
 }
 
+// fileResults stores the file name and the tags found in the file
 type fileResults struct {
 	fileName  string
 	tagsFound []tagFound
@@ -71,6 +74,7 @@ func parseFileForComments(path string, tagPatterns map[string]*regexp.Regexp) ([
 	return results, nil
 }
 
+// inspectResult prints the tags found in the files and exits if the number of tags found is greater than the fail threshold
 func inspectResult(results []fileResults, fail int) {
 	counter := 0
 	for _, result := range results {
@@ -84,30 +88,58 @@ func inspectResult(results []fileResults, fail int) {
 	}
 }
 
+// readConfigFile reads the config file and prints the tags
+func readConfigFile(configPath string) (map[string]*regexp.Regexp, int) {
+	tree, err := toml.LoadFile(configPath)
+	if err != nil {
+		fmt.Println("Error reading config file")
+		os.Exit(1)
+	}
+	confTags := tree.Get("tool.comche.flags").([]interface{})
+	tagPatterns := make(map[string]*regexp.Regexp, len(confTags))
+
+	for _, tag := range confTags {
+		tagStr, ok := tag.(string)
+		if !ok {
+			fmt.Println("Invalid tag format")
+			os.Exit(1)
+		}
+
+		pattern := fmt.Sprintf(`# ?%s`, regexp.QuoteMeta(tagStr))
+		re, err := regexp.Compile(pattern)
+		if err != nil {
+			fmt.Printf("Error compiling regex for tag %s: %v\n", tagStr, err)
+			os.Exit(1)
+		}
+
+		tagPatterns[tagStr] = re
+	}
+
+	fails := tree.Get("tool.comche.fail").(int64)
+
+	return tagPatterns, int(fails)
+}
+
 func main() {
 	dirPtr := flag.String("dir", ".", "the root directory to scan for Python files")
 	tagsPtr := flag.String("tags", "TODO-BUG-FIXME", "dash-separated list of tags to search for")
 	modePtr := flag.String("mode", "commit", "mode of operation: commit or root")
 	failPtr := flag.Int("fail", 0, "fail over n tags found")
+	configPtr := flag.String("config", "", "path to the configuration file")
+
 	flag.Parse()
 
 	root := *dirPtr
 	tags := strings.Split(*tagsPtr, "-")
 	mode := *modePtr
 
-	tagPatterns := make(map[string]*regexp.Regexp, len(tags))
-	for _, tag := range tags {
-		pattern := fmt.Sprintf(`# ?%s`, regexp.QuoteMeta(tag))
-		re, err := regexp.Compile(pattern)
-		if err != nil {
-			fmt.Printf("Error compiling regex for tag %s: %v\n", tag, err)
-			os.Exit(1)
-		}
-		tagPatterns[tag] = re
-	}
-
 	var pythonFiles []string
 	var err error
+	var fail int
+	var tagPatterns map[string]*regexp.Regexp
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var results []fileResults
 
 	if mode == "commit" {
 		pythonFiles = flag.Args()
@@ -129,9 +161,21 @@ func main() {
 		os.Exit(1)
 	}
 
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	var results []fileResults
+	if *configPtr != "" {
+		tagPatterns, fail = readConfigFile(*configPtr)
+	} else {
+		fail = *failPtr
+		tagPatterns = make(map[string]*regexp.Regexp, len(tags))
+		for _, tag := range tags {
+			pattern := fmt.Sprintf(`# ?%s`, regexp.QuoteMeta(tag))
+			re, err := regexp.Compile(pattern)
+			if err != nil {
+				fmt.Printf("Error compiling regex for tag %s: %v\n", tag, err)
+				os.Exit(1)
+			}
+			tagPatterns[tag] = re
+		}
+	}
 
 	for _, file := range pythonFiles {
 		wg.Add(1)
@@ -150,5 +194,5 @@ func main() {
 
 	wg.Wait()
 
-	inspectResult(results, *failPtr)
+	inspectResult(results, fail)
 }
