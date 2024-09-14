@@ -6,13 +6,16 @@ stages:
 build:
   stage: build
   script:
-    - go build -trimpath -ldflags="-s -w" -o bin/main_ci main.go
-    - if cmp -s bin/main_ci bin/main; then
-        echo "Check build pass - binaries are identical.";
+    - go build -o bin/main_ci main.go
+    - old_hash=$(sha256sum bin/main | awk '{ print $1 }');
+      new_hash=$(sha256sum bin/main_ci | awk '{ print $1 }');
+      if [ "$old_hash" = "$new_hash" ]; then
+        echo "Check build pass - checksums are identical.";
       else
-        echo "Check build fail - binaries differ.";
+        echo "Check build fail - checksums differ.";
         exit 1;
       fi
+
   only:
     - main
     - dev
