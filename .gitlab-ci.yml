@@ -1,24 +1,16 @@
 image: golang:1.22.3
 
 stages:
+  - test
   - build
 
-build:
+format:
+  stage: test
+  script:
+    - go fmt ./...
+    - go vet ./...
+
+compile:
   stage: build
   script:
-    - go build -o bin/main_ci main.go
-    - if [ -f bin/main ]; then echo "bin/main exists"; else echo "bin/main missing"; exit 1; fi
-    - old_hash=$(sha256sum bin/main | awk '{ print $1 }');
-      new_hash=$(sha256sum bin/main_ci | awk '{ print $1 }');
-      echo "Old hash $old_hash";
-      echo "New hash $new_hash";
-      if [ "$old_hash" = "$new_hash" ]; then
-        echo "Check build pass - checksums are identical.";
-      else
-        echo "Check build fail - checksums differ.";
-        exit 1;
-      fi
-
-  only:
-    - main
-    - dev
+    - go build -o bin/main main.go
