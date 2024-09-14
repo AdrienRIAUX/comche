@@ -6,7 +6,8 @@ stages:
 build:
   stage: build
   script:
-    - go build -o bin/main main.go
+    - go build -o bin/main_ci main.go
+    - if cmp bin/main_ci bin/main; then echo "check build pass"; else echo "check build fail"; exit 1; fi
   only:
     - main
     - dev
