@@ -3,12 +3,22 @@ image: golang:1.22
 stages:
   - build
 
+variables:
+  GIT_DEPTH: 0
+
+before_script:
+  - git fetch --all
+  - git checkout $CI_COMMIT_REF_NAME
+
 build:
   stage: build
   script:
     - go build -o bin/main_ci main.go
+    - if [ -f bin/main ]; then echo "bin/main exists"; else echo "bin/main missing"; exit 1; fi
     - old_hash=$(sha256sum bin/main | awk '{ print $1 }');
       new_hash=$(sha256sum bin/main_ci | awk '{ print $1 }');
+      echo "Old hash $old_hash";
+      echo "New hash $new_hash";
       if [ "$old_hash" = "$new_hash" ]; then
         echo "Check build pass - checksums are identical.";
       else
