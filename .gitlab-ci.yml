@@ -6,8 +6,13 @@ stages:
 build:
   stage: build
   script:
-    - go build -o bin/main_ci main.go
-    - if cmp bin/main_ci bin/main; then echo "check build pass"; else echo "check build fail"; exit 1; fi
+    - go build -trimpath -ldflags="-s -w" -o bin/main_ci main.go
+    - if cmp -s bin/main_ci bin/main; then
+        echo "Check build pass - binaries are identical.";
+      else
+        echo "Check build fail - binaries differ.";
+        exit 1;
+      fi
   only:
     - main
     - dev
