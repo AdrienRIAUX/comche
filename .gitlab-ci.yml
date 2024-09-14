@@ -1,14 +1,7 @@
-image: golang:1.22
+image: golang:1.22.3
 
 stages:
   - build
-
-variables:
-  GIT_DEPTH: 0
-
-before_script:
-  - git fetch --all
-  - git checkout $CI_COMMIT_REF_NAME
 
 build:
   stage: build
