@@ -18,7 +18,24 @@ The following flags can be used with the CLI to customize its behavior:
 - `-tags`: Dash-separated list of tags to search for (default is "TODO-BUG-FIXME").
 - `-mode`: Mode of operation, either "commit" or "root" (default is "commit").
 - `-fail`: Fail the commit if the number of tags found exceeds this number (default is 0).
-- `-config` : The path to the TOML configuration file to use. It will overide the over `-tags` and `-fail` flags if specified. 
+- `-config` : The path to the TOML configuration file to use. It will overide the over `-tags` and `-fail` flags if specified.
+
+## TOML Configuration
+
+To use a TOML configuration file with the `-config` flag, you need to provide a TOML file that includes the **tool.comche** table (a collection of key-value pairs) and the following keys:
+- **flags**: an array of strings representing the list of tags to search for.
+- **fail**: the maximum number of tags found before the commit is aborted.
+
+Example:
+```toml
+[tool.comche]
+flags = [
+  "TODO",
+  "FIXME",
+  "BUG",
+]
+fail = 0
+```
 
 ## Usage
 
