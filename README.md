@@ -23,13 +23,13 @@ The following flags can be used with the CLI to customize its behavior:
 ## TOML Configuration
 
 To use a TOML configuration file with the `-config` flag, you need to provide a TOML file that includes the **tool.comche** table (a collection of key-value pairs) and the following keys:
-- **flags**: an array of strings representing the list of tags to search for.
+- **tags**: an array of strings representing the list of tags to search for.
 - **fail**: the maximum number of tags found before the commit is aborted.
 
 Example:
 ```toml
 [tool.comche]
-flags = [
+tags = [
   "TODO",
   "FIXME",
   "BUG",
@@ -47,8 +47,9 @@ repos:
     rev: v0.1.2
     hooks:
       - id: comche
-        args: [-config="<path_to_the_toml>"]
+        args: [-config=<path_to_the_toml>]
 ```
+Where *<path_to_the_toml>* refers to the location of your TOML file, such as *pyproject.toml*. Be sure to omit quotation marks around the path when specifying it.
 
 Alternatively, you can run Comments Checker manually (you need to have go installed):
 
