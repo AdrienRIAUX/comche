@@ -44,7 +44,7 @@ To use Comments Checker as a pre-commit hook (with a TOML configuration file), a
 ```yaml
 repos:
   - repo: https://gitlab.com/Adrien_RIAUX/comche
-    rev: v0.1.2
+    rev: v0.1.3
     hooks:
       - id: comche
         args: [-config=<path_to_the_toml>]
