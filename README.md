@@ -8,33 +8,53 @@ Comments Checker is a pre-commit hook written in Go, designed for fast parsing a
 - **Customizable Tags**: Search for customizable tags like TODO, BUG, FIXME, etc.
 - **Pre-Commit Hook**: Easily integrates with pre-commit or CI tools like GitHub Actions.
 - **Fail Conditions**: Option to set a threshold for the number of tags found, failing the commit if exceeded.
+- **TOML Configuration**: Configure the behavior of Comments Checker using a TOML file.
 
 ## Available Flags
 
 The following flags can be used with the CLI to customize its behavior:
 
 - `-dir`: Specifies the root directory to scan for Python files (default is current directory).
-- `-tags`: Comma-separated list of tags to search for (default is "TODO,BUG,FIXME").
+- `-tags`: Dash-separated list of tags to search for (default is "TODO-BUG-FIXME").
 - `-mode`: Mode of operation, either "commit" or "root" (default is "commit").
 - `-fail`: Fail the commit if the number of tags found exceeds this number (default is 0).
+- `-config` : The path to the TOML configuration file to use. It will overide the over `-tags` and `-fail` flags if specified.
+
+## TOML Configuration
+
+To use a TOML configuration file with the `-config` flag, you need to provide a TOML file that includes the **tool.comche** table (a collection of key-value pairs) and the following keys:
+- **flags**: an array of strings representing the list of tags to search for.
+- **fail**: the maximum number of tags found before the commit is aborted.
+
+Example:
+```toml
+[tool.comche]
+flags = [
+  "TODO",
+  "FIXME",
+  "BUG",
+]
+fail = 0
+```
 
 ## Usage
 
-To use Comments Checker as a pre-commit hook, add the following to your `.pre-commit-config.yaml` file:
+To use Comments Checker as a pre-commit hook (with a TOML configuration file), add the following to your `.pre-commit-config.yaml` file:
 
 ```yaml
 repos:
   - repo: https://gitlab.com/Adrien_RIAUX/comche
-    rev: v0.1.1
+    rev: v0.1.2
     hooks:
-      id: comche
+      - id: comche
+        args: [-config="<path_to_the_toml>"]
 ```
 
 Alternatively, you can run Comments Checker manually (you need to have go installed):
 
 ```bash
 git clone https://gitlab.com/Adrien_RIAUX/comche
-go run main.go -dir=./path/to/your/code -tags=TODO,BUG,FIXME -mode=commit -fail=5
+go run main.go -dir="./path/to/your/code" -tags="TODO-BUG-FIXME" -mode="commit" -fail=5
 ```
 
 ## Contributing

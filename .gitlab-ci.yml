@@ -1,0 +1,16 @@
+image: golang:1.22.3
+
+stages:
+  - test
+  - build
+
+format:
+  stage: test
+  script:
+    - go fmt ./...
+    - go vet ./...
+
+compile:
+  stage: build
+  script:
+    - go build -o bin/main main.go
