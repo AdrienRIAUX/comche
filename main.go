@@ -95,7 +95,7 @@ func readConfigFile(configPath string) (map[string]*regexp.Regexp, int) {
 		fmt.Println("Error reading config file")
 		os.Exit(1)
 	}
-	confTags := tree.Get("tool.comche.flags").([]interface{})
+	confTags := tree.Get("tool.comche.tags").([]interface{})
 	tagPatterns := make(map[string]*regexp.Regexp, len(confTags))
 
 	for _, tag := range confTags {
